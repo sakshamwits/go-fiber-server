@@ -8,26 +8,13 @@ import (
 	"github.com/google/uuid"
 )
 
-func GetNotes(c *fiber.Ctx) error {
-	db := database.DB
-	var notes []model.Note
-
-	db.Find(&notes)
-
-	if len(notes) == 0 {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "No notes present", "data": nil})
-	}
-
-	return c.JSON(fiber.Map{"status": "success", "message": "Notes Found", "data": notes})
-}
-
-func CreateNotes(c *fiber.Ctx) error {
+func CreateNote(c *fiber.Ctx) error {
 	db := database.DB
 	note := new(model.Note)
 
 	err := c.BodyParser(note)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "Review your input", "data": err})
+		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "Invalid input", "data": err})
 	}
 
 	note.ID = uuid.New()
@@ -37,7 +24,20 @@ func CreateNotes(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "Could not create note", "data": err})
 	}
 
-	return c.JSON(fiber.Map{"status": "success", "message": "Created Note", "data": note})
+	return c.Status(200).JSON(fiber.Map{"status": "success", "message": "Note created", "data": note})
+}
+
+func GetNotes(c *fiber.Ctx) error {
+	db := database.DB
+	var notes []model.Note
+
+	db.Find(&notes)
+
+	if len(notes) == 0 {
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "Notes not found", "data": nil})
+	}
+
+	return c.Status(200).JSON(fiber.Map{"status": "success", "message": "Notes Found", "data": notes})
 }
 
 func GetNote(c *fiber.Ctx) error {
@@ -49,17 +49,17 @@ func GetNote(c *fiber.Ctx) error {
 	db.Find(&note, "id = ?", id)
 
 	if note.ID == uuid.Nil {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "No note present", "data": nil})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "Note not found", "data": nil})
 	}
 
-	return c.JSON(fiber.Map{"status": "success", "message": "Notes found", "data": note})
+	return c.Status(200).JSON(fiber.Map{"status": "success", "message": "Note found", "data": note})
 }
 
 func UpdateNote(c *fiber.Ctx) error {
 	type updateNote struct {
-		Title string `json:"title"`
+		Title    string `json:"title"`
 		SubTitle string `json:"sub_title"`
-		Text string `json:"Text"`
+		Text     string `json:"text"`
 	}
 
 	db := database.DB
@@ -70,13 +70,13 @@ func UpdateNote(c *fiber.Ctx) error {
 	db.Find(&note, "id = ?", id)
 
 	if note.ID == uuid.Nil {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "no note present", "data": nil})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "Note not found", "data": nil})
 	}
 
 	var updateNoteData updateNote
-	err := c.BodyParser((&updateNoteData))
+	err := c.BodyParser(&updateNoteData)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "Review your input", "data": err})
+		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "Invalid input", "data": err})
 	}
 
 	note.Title = updateNoteData.Title
@@ -85,7 +85,7 @@ func UpdateNote(c *fiber.Ctx) error {
 
 	db.Save(&note)
 
-	return c.JSON(fiber.Map{"status": "success", "message": "Notes found", "data": note})
+	return c.Status(200).JSON(fiber.Map{"status": "success", "message": "Note updated", "data": note})
 }
 
 func DeleteNote(c *fiber.Ctx) error {
@@ -97,14 +97,14 @@ func DeleteNote(c *fiber.Ctx) error {
 	db.Find(&note, "id = ?", id)
 
 	if note.ID == uuid.Nil {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "No note present", "data": nil})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "Note not found", "data": nil})
 	}
 
 	err := db.Delete(&note, "id = ?", id).Error
 
 	if err != nil {
-        return c.Status(404).JSON(fiber.Map{"status": "error", "message": "Failed to delete note", "data": nil})
-    }
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "Failed to delete note", "data": nil})
+	}
 
-    return c.JSON(fiber.Map{"status": "success", "message": "Deleted Note"})
+	return c.Status(200).JSON(fiber.Map{"status": "success", "message": "Note deleted"})
 }
